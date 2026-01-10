@@ -28,15 +28,16 @@ export default function App() {
       const data = JSON.parse(e.data);
 
       if (data.type === "room-created") {
-        setRoom(data.code);
+        setRoom(data.code); // mentor
         setStage("chat");
       }
 
       if (data.type === "history") {
         setMessages(data.data);
         setStage("chat");
-        setRoom(code); // keep student room
+        setRoom(code); // student joins, use entered room code
       }
+
 
       if (data.type === "chat") setMessages((prev) => [...prev, data]);
       if (data.type === "error") alert(data.text);
@@ -52,9 +53,10 @@ export default function App() {
   };
 
   const downloadNotes = () => {
-    if (!room) return alert("No room selected");
+    if (!room) return alert("No room selected yet");
     window.open(`${BACKEND_HTTP}/download-notes/${room}`);
   };
+
 
   if (stage === "home") {
     return (

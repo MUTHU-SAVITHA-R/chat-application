@@ -29,8 +29,9 @@ app.get("/", (req, res) => {
 /* ==========================
    Download notes for a room
 ========================== */
+// Download notes for a specific room
 app.get("/download-notes/:room", (req, res) => {
-  const roomCode = req.params.room;
+  const roomCode = req.params.room.toUpperCase(); // normalize
   const room = rooms[roomCode];
 
   if (!room || !room.messages.length) {
@@ -47,6 +48,7 @@ app.get("/download-notes/:room", (req, res) => {
 
   doc.end();
 });
+
 
 /* ==========================
    WebSocket logic
