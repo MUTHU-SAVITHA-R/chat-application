@@ -1,11 +1,9 @@
-// server.js
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const WebSocket = require("ws");
-const fs = require("fs");
 const PDFDocument = require("pdfkit");
-const { v4: uuidv4 } = require("uuid"); // make sure to install: npm install uuid
+const { v4: uuidv4 } = require("uuid");
 
 const app = express();
 app.use(cors());
@@ -15,106 +13,115 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// In-memory room storage
-const rooms = {}; 
-// rooms = { roomCode: { mentor: ws, students: [], messages: [] } }
+/* ===== GLOBAL STORAGE (important for Render) ===== */
+global.rooms = global.rooms || {};
+const rooms = global.rooms;
 
+/* ===== Health Check ===== */
 app.get("/", (req, res) => {
-  res.send("Chat backend is running");
+  res.send("Chat backend running");
 });
 
-// PDF download endpoint
+/* ===== PDF Download ===== */
 app.get("/download-notes/:room", (req, res) => {
   const roomCode = req.params.room;
   const room = rooms[roomCode];
-  if (!room) return res.status(404).send("Room not found");
 
-  const notes = room.messages || [];
+  if (!room || room.messages.length === 0) {
+    return res.status(404).send("No notes found for this room");
+  }
+
   const doc = new PDFDocument();
   res.setHeader("Content-Disposition", `attachment; filename=notes_${roomCode}.pdf`);
   res.setHeader("Content-Type", "application/pdf");
-  doc.pipe(res);
 
-  doc.fontSize(12).text(`Chat Notes for Room: ${roomCode}`).moveDown();
-  notes.forEach((n) => {
-    doc.text(`${n.name} (${n.role}): ${n.text}`).moveDown();
+  doc.pipe(res);
+  doc.fontSize(16).text(`Chat Notes – Room ${roomCode}\n\n`);
+
+  room.messages.forEach(m => {
+    doc.fontSize(12).text(`${m.name}: ${m.text}`);
+    doc.moveDown();
   });
 
   doc.end();
 });
 
-// WebSocket connection
+/* ===== WebSocket ===== */
 wss.on("connection", (ws) => {
   let currentRoom = null;
   let currentRole = null;
   let currentName = null;
 
   ws.on("message", (data) => {
-    let msg;
-    try {
-      msg = JSON.parse(data);
-    } catch {
-      return;
-    }
+    const msg = JSON.parse(data);
 
-    // Mentor creates room
-    if (msg.type === "create-room" && msg.role === "mentor") {
-      const roomCode = uuidv4().slice(0, 6); // 6-char code
+    /* Mentor creates room */
+    if (msg.type === "create-room") {
+      const roomCode = uuidv4().slice(0, 6).toUpperCase();
       rooms[roomCode] = { mentor: ws, students: [], messages: [] };
+
       currentRoom = roomCode;
       currentRole = "mentor";
+      currentName = "Mentor";
+
       ws.send(JSON.stringify({ type: "room-created", code: roomCode }));
     }
 
-    // Student joins room
-    else if (msg.type === "join-room" && msg.role === "student") {
-      const { code, name } = msg;
-      const room = rooms[code];
-      if (!room) return ws.send(JSON.stringify({ type: "error", text: "Invalid room code" }));
+    /* Student joins */
+    if (msg.type === "join-room") {
+      const room = rooms[msg.code];
+      if (!room) {
+        ws.send(JSON.stringify({ type: "error", text: "Invalid room code" }));
+        return;
+      }
 
       room.students.push(ws);
-      room.messages.forEach((m) => ws.send(JSON.stringify({ type: "chat", ...m })));
-
-      currentRoom = code;
+      currentRoom = msg.code;
       currentRole = "student";
-      currentName = name;
+      currentName = msg.name;
+
+      room.messages.forEach(m =>
+        ws.send(JSON.stringify({ type: "chat", ...m }))
+      );
     }
 
-    // Chat message
-    else if (msg.type === "chat" && currentRoom) {
+    /* Chat */
+    if (msg.type === "chat" && currentRoom) {
       const chat = {
-        name: currentRole === "student" ? currentName : "Mentor",
+        name: currentName,
         role: currentRole,
-        text: msg.text,
+        text: msg.text
       };
 
       rooms[currentRoom].messages.push(chat);
 
-      // Broadcast to mentor
-      if (rooms[currentRoom].mentor && rooms[currentRoom].mentor.readyState === WebSocket.OPEN) {
-        rooms[currentRoom].mentor.send(JSON.stringify({ type: "chat", ...chat }));
-      }
+      const room = rooms[currentRoom];
 
-      // Broadcast to students
-      rooms[currentRoom].students.forEach((s) => {
-        if (s.readyState === WebSocket.OPEN) s.send(JSON.stringify({ type: "chat", ...chat }));
+      if (room.mentor.readyState === WebSocket.OPEN)
+        room.mentor.send(JSON.stringify({ type: "chat", ...chat }));
+
+      room.students.forEach(s => {
+        if (s.readyState === WebSocket.OPEN)
+          s.send(JSON.stringify({ type: "chat", ...chat }));
       });
     }
   });
 
   ws.on("close", () => {
-    // Remove student
-    if (currentRoom && currentRole === "student") {
-      const idx = rooms[currentRoom].students.indexOf(ws);
-      if (idx !== -1) rooms[currentRoom].students.splice(idx, 1);
+    if (!currentRoom) return;
+    const room = rooms[currentRoom];
+    if (!room) return;
+
+    if (currentRole === "student") {
+      room.students = room.students.filter(s => s !== ws);
     }
 
-    // Delete room if mentor leaves
-    if (currentRoom && currentRole === "mentor") {
-      delete rooms[currentRoom];
+    if (currentRole === "mentor") {
+      delete rooms[currentRoom]; // class closed
     }
   });
 });
 
-// Start server
-server.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+server.listen(PORT, () =>
+  console.log(`Server running on port ${PORT}`)
+);
