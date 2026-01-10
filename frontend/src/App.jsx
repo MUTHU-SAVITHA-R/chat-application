@@ -6,17 +6,19 @@ const BACKEND_HTTP = "https://chat-application-x3vg.onrender.com";
 
 export default function App() {
   const socketRef = useRef(null);
-  const [stage, setStage] = useState("home");
-  const [name, setName] = useState("");
-  const [roomInput, setRoomInput] = useState(""); // Student input
-  const [room, setRoom] = useState(""); // Actual room code from backend
+
+  const [stage, setStage] = useState("home"); // home | chat
   const [role, setRole] = useState("");
+  const [name, setName] = useState("");
+  const [roomInput, setRoomInput] = useState("");
+  const [room, setRoom] = useState("");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
 
   const connect = (selectedRole) => {
     if (!name.trim()) return alert("Enter your name");
-    if (selectedRole === "student" && !roomInput.trim()) return alert("Enter room code");
+    if (selectedRole === "student" && !roomInput.trim())
+      return alert("Enter room code");
 
     setRole(selectedRole);
 
@@ -25,16 +27,18 @@ export default function App() {
 
     socket.onopen = () => {
       if (selectedRole === "mentor") {
-        // Mentor creates a room
         socket.send(JSON.stringify({ type: "create-room", role: "mentor" }));
       } else {
-        // Student joins room
-        socket.send(JSON.stringify({
-          type: "join-room",
-          role: "student",
-          code: roomInput, // pass the input code exactly
-          name: name
-        }));
+        socket.send(
+          JSON.stringify({
+            type: "join-room",
+            role: "student",
+            code: roomInput,
+            name: name,
+          })
+        );
+        setRoom(roomInput);
+        setStage("chat");
       }
     };
 
@@ -47,7 +51,9 @@ export default function App() {
         setStage("chat");
       }
 
-      if (data.type === "chat") setMessages(prev => [...prev, data]);
+      if (data.type === "chat") {
+        setMessages((prev) => [...prev, data]);
+      }
 
       if (data.type === "error") alert(data.text);
     };
@@ -57,7 +63,13 @@ export default function App() {
 
   const sendMessage = () => {
     if (!message.trim()) return;
-    socketRef.current.send(JSON.stringify({ type: "chat", text: message }));
+
+    socketRef.current.send(
+      JSON.stringify({
+        type: "chat",
+        text: message,
+      })
+    );
     setMessage("");
   };
 
@@ -66,46 +78,49 @@ export default function App() {
     window.open(`${BACKEND_HTTP}/download-notes/${room}`);
   };
 
+  /* ============ HOME PAGE ============ */
   if (stage === "home") {
     return (
       <div className="center">
-        <h2>Virtual Classroom</h2>
-        <input
-          placeholder="Your Name"
-          value={name}
-          onChange={e => setName(e.target.value)}
-        />
-        <input
-          placeholder="Room Code (for students)"
-          value={roomInput}
-          onChange={e => setRoomInput(e.target.value)}
-        />
-        <div className="btn-group">
-          <button onClick={() => connect("mentor")}>Create Class</button>
-          <button onClick={() => connect("student")}>Join Class</button>
+        <div className="home-card">
+          <h2>📚 Virtual Classroom</h2>
+
+          <input
+            placeholder="Your Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+
+          <input
+            placeholder="Room Code (Students only)"
+            value={roomInput}
+            onChange={(e) => setRoomInput(e.target.value)}
+          />
+
+          <div className="btn-group">
+            <button onClick={() => connect("mentor")}>Create Class</button>
+            <button onClick={() => connect("student")}>Join Class</button>
+          </div>
         </div>
       </div>
     );
   }
 
+  /* ============ CHAT PAGE ============ */
   return (
     <div className="app">
       <div className="header">
-        {role === "mentor" ? "Mentor Classroom" : "Student Classroom"} | Room: {room}
+        <span>{role === "mentor" ? "Mentor" : "Student"} Classroom</span>
+        <span>Room: {room}</span>
       </div>
 
-      <button className="downloadBtn" onClick={downloadNotes}>📄 Download Notes</button>
+      <button className="downloadBtn" onClick={downloadNotes}>
+        📄 Download Notes
+      </button>
 
       <div className="chatBox">
         {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`msg ${m.role}`}
-            style={{
-              alignSelf: m.role === role ? "flex-end" : "flex-start",
-              background: m.role === "mentor" ? "#d1e7ff" : "#e2ffe2"
-            }}
-          >
+          <div key={i} className={`msg ${m.role}`}>
             <b>{m.name}</b>
             <p>{m.text}</p>
           </div>
@@ -114,10 +129,10 @@ export default function App() {
 
       <div className="inputBox">
         <input
-          placeholder="Type message..."
+          placeholder="Type your message..."
           value={message}
-          onChange={e => setMessage(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && sendMessage()}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
         <button onClick={sendMessage}>Send</button>
       </div>
