@@ -1,9 +1,8 @@
 const WebSocket = require("ws");
-const fs = require("fs");
-const PDFDocument = require("pdfkit");
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
+const crypto = require("crypto");
 
 const app = express();
 app.use(cors());
@@ -13,33 +12,35 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-/* ============================
-   Rooms
-============================ */
-const rooms = {}; // roomCode → { mentor, students[], messages[], expires }
-
-/* ============================
-   Health check
-============================ */
+/* ===========================
+   Render health check
+=========================== */
 app.get("/", (req, res) => {
   res.send("Chat backend running");
 });
 
-/* ============================
+/* ===========================
+   Rooms
+=========================== */
+const rooms = {};  
+// rooms = { CODE : { mentor, students:[], messages:[], expiry } }
+
+/* ===========================
    Generate Room Code
-============================ */
+=========================== */
 function generateCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+  return crypto.randomBytes(3).toString("hex").toUpperCase();
 }
 
-/* ============================
+/* ===========================
    WebSocket
-============================ */
+=========================== */
 wss.on("connection", (ws) => {
+
   ws.on("message", (data) => {
     const msg = JSON.parse(data);
 
-    // Create room (mentor)
+    // Mentor creates room
     if (msg.type === "create-room") {
       const code = generateCode();
 
@@ -47,17 +48,18 @@ wss.on("connection", (ws) => {
         mentor: ws,
         students: [],
         messages: [],
-        expires: Date.now() + 30 * 60 * 1000 // 30 min
+        expiry: Date.now() + 30 * 60 * 1000 // 30 minutes
       };
 
       ws.room = code;
       ws.role = "mentor";
 
       ws.send(JSON.stringify({ type: "room-created", code }));
+
       return;
     }
 
-    // Join room (student)
+    // Student joins
     if (msg.type === "join-room") {
       const room = rooms[msg.code];
 
@@ -66,18 +68,21 @@ wss.on("connection", (ws) => {
         return;
       }
 
-      if (Date.now() > room.expires) {
+      if (Date.now() > room.expiry) {
         delete rooms[msg.code];
         ws.send(JSON.stringify({ type: "error", text: "Class expired" }));
         return;
       }
 
-      ws.name = msg.name;
       ws.room = msg.code;
       ws.role = "student";
+      ws.name = msg.name;
 
       room.students.push(ws);
+      ws.send(JSON.stringify({ type: "joined", code: msg.code }));
       ws.send(JSON.stringify({ type: "history", data: room.messages }));
+
+      return;
     }
 
     // Chat
@@ -95,14 +100,14 @@ wss.on("connection", (ws) => {
       room.messages.push(chat);
 
       if (room.mentor) room.mentor.send(JSON.stringify(chat));
-      room.students.forEach((s) => s.send(JSON.stringify(chat)));
+      room.students.forEach(s => s.send(JSON.stringify(chat)));
     }
   });
 });
 
-/* ============================
-   Start server
-============================ */
+/* ===========================
+   Start Server
+=========================== */
 server.listen(PORT, () => {
-  console.log("Backend running on", PORT);
+  console.log("Backend running on port", PORT);
 });
