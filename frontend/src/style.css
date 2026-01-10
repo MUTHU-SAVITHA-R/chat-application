@@ -1,117 +1,69 @@
-import { useRef, useState } from "react";
-import "./style.css";
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #ece5dd;
+}
 
-const BACKEND_WS = "wss://chat-app-b22h.onrender.com";
-const BACKEND_HTTP = "https://chat-app-b22h.onrender.com";
+.center {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
 
-export default function App() {
-  const socketRef = useRef(null);
-  const [role, setRole] = useState("");
-  const [connected, setConnected] = useState(false);
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [name, setName] = useState("");
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-  const downloadNotes = () => {
-    window.open(`${BACKEND_HTTP}/download-notes`);
-  };
+.header {
+  background: #128c7e;
+  color: white;
+  padding: 10px;
+  text-align: center;
+}
 
-  const connect = (selectedRole) => {
-    if (selectedRole === "student" && !name.trim()) {
-      alert("Please enter your name");
-      return;
-    }
+.chatBox {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
 
-    setRole(selectedRole);
+.msg {
+  max-width: 60%;
+  margin: 5px;
+  padding: 10px;
+  border-radius: 10px;
+  animation: fade 0.3s;
+}
 
-    const socket = new WebSocket(BACKEND_WS);
-    socketRef.current = socket;
+.mentor {
+  background: #d1e7ff;
+  align-self: flex-end;
+}
 
-    socket.onopen = () => {
-      socket.send(
-        JSON.stringify({
-          type: "join",
-          role: selectedRole,
-          name,
-        })
-      );
-      setConnected(true);
-    };
+.student {
+  background: #e2ffe2;
+  align-self: flex-start;
+}
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "history") setMessages(data.data);
-      else if (data.type === "chat") setMessages((prev) => [...prev, data]);
-      else alert(data.text);
-    };
+.inputBox {
+  display: flex;
+  padding: 10px;
+  background: white;
+}
 
-    socket.onerror = () => alert("Connection error");
-  };
+.inputBox input {
+  flex: 1;
+  padding: 10px;
+}
 
-  const sendMessage = () => {
-    if (!message.trim()) return;
-    socketRef.current.send(
-      JSON.stringify({
-        type: "chat",
-        role,
-        name: role === "student" ? name : "Mentor",
-        text: message,
-      })
-    );
-    setMessage("");
-  };
-
-  if (!connected) {
-    return (
-      <div className="center">
-        <h2>Virtual Classroom</h2>
-        <input
-          className="nameInput"
-          placeholder="Enter your name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <button className="roleBtn" onClick={() => connect("mentor")}>Mentor</button>
-        <button className="roleBtn" onClick={() => connect("student")}>Student</button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="app">
-      <div className="header">
-        {role === "mentor" ? "Mentor Classroom" : "Student Classroom"}
-      </div>
-
-      <button className="downloadBtn" onClick={downloadNotes}>
-        📄 Download Notes
-      </button>
-
-      <div className="chatBox">
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className="message"
-            style={{
-              alignSelf: m.role === role ? "flex-end" : "flex-start",
-              background: m.role === "mentor" ? "#d1e7ff" : "#e2ffe2"
-            }}
-          >
-            <b>{m.name}</b>
-            <div>{m.text}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="inputBox">
-        <input
-          className="input"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type your message..."
-        />
-        <button className="sendBtn" onClick={sendMessage}>Send</button>
-      </div>
-    </div>
-  );
+@keyframes fade {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }

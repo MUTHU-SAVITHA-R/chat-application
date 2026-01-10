@@ -13,95 +13,96 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-let mentor = null;
-let students = [];
-let messages = [];
+/* ============================
+   Rooms
+============================ */
+const rooms = {}; // roomCode → { mentor, students[], messages[], expires }
 
-/* ===============================
-   Render health check route
-   THIS IS REQUIRED
-================================*/
+/* ============================
+   Health check
+============================ */
 app.get("/", (req, res) => {
-  res.send("Chat backend is running");
+  res.send("Chat backend running");
 });
 
-/* ===============================
-   Notes file functions
-================================*/
-function clearNotes() {
-  fs.writeFileSync("notes.json", JSON.stringify([], null, 2));
+/* ============================
+   Generate Room Code
+============================ */
+function generateCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-function saveNote(note) {
-  const notes = fs.existsSync("notes.json")
-    ? JSON.parse(fs.readFileSync("notes.json"))
-    : [];
-  notes.push(note);
-  fs.writeFileSync("notes.json", JSON.stringify(notes, null, 2));
-}
-
-/* ===============================
-   WebSocket logic
-================================*/
+/* ============================
+   WebSocket
+============================ */
 wss.on("connection", (ws) => {
   ws.on("message", (data) => {
     const msg = JSON.parse(data);
 
-    // Mentor joins
-    if (msg.type === "join" && msg.role === "mentor") {
-      mentor = ws;
-      clearNotes();
-      students.forEach((s) =>
-        s.send(JSON.stringify({ type: "history", data: messages }))
-      );
-    }
+    // Create room (mentor)
+    if (msg.type === "create-room") {
+      const code = generateCode();
 
-    // Student joins
-    if (msg.type === "join" && msg.role === "student") {
-      ws.name = msg.name;
-      students.push(ws);
-      ws.send(JSON.stringify({ type: "history", data: messages }));
-    }
-
-    // Chat message
-    if (msg.type === "chat") {
-      const chat = {
-        type: "chat",
-        role: msg.role,
-        name: msg.name,
-        text: msg.text,
+      rooms[code] = {
+        mentor: ws,
+        students: [],
+        messages: [],
+        expires: Date.now() + 30 * 60 * 1000 // 30 min
       };
 
-      messages.push(chat);
-      saveNote(chat);
+      ws.room = code;
+      ws.role = "mentor";
 
-      if (mentor) mentor.send(JSON.stringify(chat));
-      students.forEach((s) => s.send(JSON.stringify(chat)));
+      ws.send(JSON.stringify({ type: "room-created", code }));
+      return;
+    }
+
+    // Join room (student)
+    if (msg.type === "join-room") {
+      const room = rooms[msg.code];
+
+      if (!room) {
+        ws.send(JSON.stringify({ type: "error", text: "Invalid room code" }));
+        return;
+      }
+
+      if (Date.now() > room.expires) {
+        delete rooms[msg.code];
+        ws.send(JSON.stringify({ type: "error", text: "Class expired" }));
+        return;
+      }
+
+      ws.name = msg.name;
+      ws.room = msg.code;
+      ws.role = "student";
+
+      room.students.push(ws);
+      ws.send(JSON.stringify({ type: "history", data: room.messages }));
+    }
+
+    // Chat
+    if (msg.type === "chat") {
+      const room = rooms[ws.room];
+      if (!room) return;
+
+      const chat = {
+        type: "chat",
+        name: ws.role === "mentor" ? "Mentor" : ws.name,
+        role: ws.role,
+        text: msg.text
+      };
+
+      room.messages.push(chat);
+
+      if (room.mentor) room.mentor.send(JSON.stringify(chat));
+      room.students.forEach((s) => s.send(JSON.stringify(chat)));
     }
   });
 });
 
-/* ===============================
-   Download PDF
-================================*/
-app.get("/download-notes", (req, res) => {
-  const notes = fs.existsSync("notes.json")
-    ? JSON.parse(fs.readFileSync("notes.json"))
-    : [];
-
-  const doc = new PDFDocument();
-  res.setHeader("Content-Disposition", "attachment; filename=notes.pdf");
-
-  doc.pipe(res);
-  notes.forEach((n) => {
-    doc.text(`${n.name}: ${n.text}`).moveDown();
-  });
-  doc.end();
-});
-
-/* ===============================
+/* ============================
    Start server
-================================*/
+============================ */
 server.listen(PORT, () => {
-  console.log("Backend running on port", PORT);
+  console.log("Backend running on", PORT);
 });
