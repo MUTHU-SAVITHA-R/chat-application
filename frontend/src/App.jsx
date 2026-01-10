@@ -8,15 +8,15 @@ export default function App() {
   const socketRef = useRef(null);
   const [stage, setStage] = useState("home");
   const [name, setName] = useState("");
-  const [roomCode, setRoomCode] = useState(""); // Student enters this
+  const [roomInput, setRoomInput] = useState(""); // Student input
   const [room, setRoom] = useState(""); // Actual room code from backend
-  const [role, setRole] = useState(""); // mentor/student
+  const [role, setRole] = useState("");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
 
   const connect = (selectedRole) => {
-    if (!name.trim()) return alert("Please enter your name");
-    if (selectedRole === "student" && !roomCode.trim()) return alert("Please enter room code");
+    if (!name.trim()) return alert("Enter your name");
+    if (selectedRole === "student" && !roomInput.trim()) return alert("Enter room code");
 
     setRole(selectedRole);
 
@@ -25,13 +25,15 @@ export default function App() {
 
     socket.onopen = () => {
       if (selectedRole === "mentor") {
+        // Mentor creates a room
         socket.send(JSON.stringify({ type: "create-room", role: "mentor" }));
       } else {
+        // Student joins room
         socket.send(JSON.stringify({
           type: "join-room",
           role: "student",
-          code: roomCode,
-          name
+          code: roomInput, // pass the input code exactly
+          name: name
         }));
       }
     };
@@ -46,6 +48,7 @@ export default function App() {
       }
 
       if (data.type === "chat") setMessages(prev => [...prev, data]);
+
       if (data.type === "error") alert(data.text);
     };
 
@@ -54,10 +57,8 @@ export default function App() {
 
   const sendMessage = () => {
     if (!message.trim()) return;
-    if (socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ type: "chat", text: message }));
-      setMessage("");
-    }
+    socketRef.current.send(JSON.stringify({ type: "chat", text: message }));
+    setMessage("");
   };
 
   const downloadNotes = () => {
@@ -65,7 +66,6 @@ export default function App() {
     window.open(`${BACKEND_HTTP}/download-notes/${room}`);
   };
 
-  // Home Page
   if (stage === "home") {
     return (
       <div className="center">
@@ -76,9 +76,9 @@ export default function App() {
           onChange={e => setName(e.target.value)}
         />
         <input
-          placeholder="Room Code (students)"
-          value={roomCode}
-          onChange={e => setRoomCode(e.target.value)}
+          placeholder="Room Code (for students)"
+          value={roomInput}
+          onChange={e => setRoomInput(e.target.value)}
         />
         <div className="btn-group">
           <button onClick={() => connect("mentor")}>Create Class</button>
@@ -88,7 +88,6 @@ export default function App() {
     );
   }
 
-  // Chat Page
   return (
     <div className="app">
       <div className="header">
@@ -115,7 +114,7 @@ export default function App() {
 
       <div className="inputBox">
         <input
-          placeholder="Type your message..."
+          placeholder="Type message..."
           value={message}
           onChange={e => setMessage(e.target.value)}
           onKeyDown={e => e.key === "Enter" && sendMessage()}
