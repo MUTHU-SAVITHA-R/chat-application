@@ -119,12 +119,22 @@ export default function App() {
       </button>
 
       <div className="chatBox">
-        {messages.map((m, i) => (
-          <div key={i} className={`msg ${m.role}`}>
-            <b>{m.name}</b>
-            <p>{m.text}</p>
-          </div>
-        ))}
+        {messages.map((m, i) => {
+          const isMine =
+            (role === "mentor" && m.role === "mentor") ||
+            (role === "student" && m.role === "student" && m.name === name);
+
+          return (
+            <div
+              key={i}
+              className={`msg ${isMine ? "my" : "other"}`}
+            >
+              <b>{m.name}</b>
+              <p>{m.text}</p>
+            </div>
+          );
+        })}
+
       </div>
 
       <div className="inputBox">

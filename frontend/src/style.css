@@ -151,3 +151,12 @@ body {
     max-width: 85%;
   }
 }
+.msg.my {
+  align-self: flex-end;
+  background: #dcf8c6;   /* WhatsApp green */
+}
+
+.msg.other {
+  align-self: flex-start;
+  background: #e3f2fd;
+}
