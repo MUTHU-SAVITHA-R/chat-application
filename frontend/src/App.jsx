@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import "./style.css";
 
 const BACKEND_WS = "wss://chat-application-x3vg.onrender.com";
@@ -6,23 +6,20 @@ const BACKEND_HTTP = "https://chat-application-x3vg.onrender.com";
 
 export default function App() {
   const socketRef = useRef(null);
-  const [stage, setStage] = useState("home"); // home or chat
+  const [stage, setStage] = useState("home");
   const [name, setName] = useState("");
-  const [code, setCode] = useState(""); // student enters this
-  const [room, setRoom] = useState(""); // actual room code
-  const [role, setRole] = useState(""); // mentor or student
+  const [roomCode, setRoomCode] = useState(""); // Student enters this
+  const [room, setRoom] = useState(""); // Actual room code from backend
+  const [role, setRole] = useState(""); // mentor/student
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
 
-  // Connect function for both mentor and student
   const connect = (selectedRole) => {
+    if (!name.trim()) return alert("Please enter your name");
+    if (selectedRole === "student" && !roomCode.trim()) return alert("Please enter room code");
+
     setRole(selectedRole);
 
-    // Validation
-    if (!name.trim()) return alert("Please enter your name");
-    if (selectedRole === "student" && !code.trim()) return alert("Enter room code");
-
-    // Connect to WebSocket
     const socket = new WebSocket(BACKEND_WS);
     socketRef.current = socket;
 
@@ -30,31 +27,31 @@ export default function App() {
       if (selectedRole === "mentor") {
         socket.send(JSON.stringify({ type: "create-room", role: "mentor" }));
       } else {
-        socket.send(JSON.stringify({ type: "join-room", role: "student", code, name }));
+        socket.send(JSON.stringify({
+          type: "join-room",
+          role: "student",
+          code: roomCode,
+          name
+        }));
       }
     };
 
     socket.onmessage = (e) => {
       const data = JSON.parse(e.data);
-      console.log("Received:", data); // Debugging
+      console.log("Received:", data);
 
-      // Mentor gets room code
       if (data.type === "room-created") {
         setRoom(data.code);
         setStage("chat");
       }
 
-      // Chat messages
       if (data.type === "chat") setMessages(prev => [...prev, data]);
-
-      // Error messages
       if (data.type === "error") alert(data.text);
     };
 
     socket.onerror = () => alert("WebSocket connection failed");
   };
 
-  // Send chat message
   const sendMessage = () => {
     if (!message.trim()) return;
     if (socketRef.current.readyState === WebSocket.OPEN) {
@@ -63,13 +60,12 @@ export default function App() {
     }
   };
 
-  // Download notes PDF
   const downloadNotes = () => {
     if (!room) return alert("Room not available");
     window.open(`${BACKEND_HTTP}/download-notes/${room}`);
   };
 
-  // Home page (create/join)
+  // Home Page
   if (stage === "home") {
     return (
       <div className="center">
@@ -81,8 +77,8 @@ export default function App() {
         />
         <input
           placeholder="Room Code (students)"
-          value={code}
-          onChange={e => setCode(e.target.value)}
+          value={roomCode}
+          onChange={e => setRoomCode(e.target.value)}
         />
         <div className="btn-group">
           <button onClick={() => connect("mentor")}>Create Class</button>
@@ -92,16 +88,14 @@ export default function App() {
     );
   }
 
-  // Chat page
+  // Chat Page
   return (
     <div className="app">
       <div className="header">
         {role === "mentor" ? "Mentor Classroom" : "Student Classroom"} | Room: {room}
       </div>
 
-      <button className="downloadBtn" onClick={downloadNotes}>
-        📄 Download Notes
-      </button>
+      <button className="downloadBtn" onClick={downloadNotes}>📄 Download Notes</button>
 
       <div className="chatBox">
         {messages.map((m, i) => (
