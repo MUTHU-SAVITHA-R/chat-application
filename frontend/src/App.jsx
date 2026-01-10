@@ -14,27 +14,41 @@ export default function App() {
   const [role, setRole] = useState("");
 
   const connect = () => {
-    const socket = new WebSocket(BACKEND_WS);
-    socketRef.current = socket;
+  const roomToUse = role === "mentor" ? "" : code;
 
-    socket.onopen = () => {
-      if (role === "mentor") socket.send(JSON.stringify({ type: "create-room" }));
-      else socket.send(JSON.stringify({ type: "join-room", code, name }));
-    };
+  const socket = new WebSocket(
+    `${BACKEND_WS}?room=${roomToUse}&role=${role}&name=${encodeURIComponent(name)}`
+  );
 
-    socket.onmessage = (e) => {
-      const data = JSON.parse(e.data);
+  socketRef.current = socket;
 
-      if (data.type === "room-created") {
-        setRoom(data.code);
-        setStage("chat");
-      }
-
-      if (data.type === "history") setMessages(data.data);
-      if (data.type === "chat") setMessages((m) => [...m, data]);
-      if (data.type === "error") alert(data.text);
-    };
+  socket.onopen = () => {
+    if (role === "mentor") {
+      socket.send(JSON.stringify({ type: "create-room" }));
+    } else {
+      socket.send(JSON.stringify({ type: "join-room", code }));
+    }
   };
+
+  socket.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+
+    if (data.type === "room-created") {
+      setRoom(data.code);
+      setStage("chat");
+    }
+
+    if (data.type === "joined") {
+      setRoom(data.code);
+      setStage("chat");
+    }
+
+    if (data.type === "history") setMessages(data.data);
+    if (data.type === "chat") setMessages((m) => [...m, data]);
+    if (data.type === "error") alert(data.text);
+  };
+};
+
 
   const send = () => {
     socketRef.current.send(JSON.stringify({ type: "chat", text: message }));
