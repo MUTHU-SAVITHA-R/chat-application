@@ -7,7 +7,7 @@ const BACKEND_HTTP = "https://chat-application-x3vg.onrender.com";
 export default function App() {
   const socketRef = useRef(null);
 
-  const [stage, setStage] = useState("home"); // home | chat
+  const [stage, setStage] = useState("home"); 
   const [role, setRole] = useState("");
   const [name, setName] = useState("");
   const [roomInput, setRoomInput] = useState("");
@@ -78,7 +78,7 @@ export default function App() {
     window.open(`${BACKEND_HTTP}/download-notes/${room}`);
   };
 
-  /* ============ HOME PAGE ============ */
+ 
   if (stage === "home") {
     return (
       <div className="center">
@@ -106,7 +106,7 @@ export default function App() {
     );
   }
 
-  /* ============ CHAT PAGE ============ */
+
   return (
     <div className="app">
       <div className="header">

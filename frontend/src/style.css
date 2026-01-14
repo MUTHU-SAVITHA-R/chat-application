@@ -1,4 +1,4 @@
-/* Reset */
+
 * {
   box-sizing: border-box;
   font-family: "Segoe UI", sans-serif;
@@ -9,7 +9,6 @@ body {
   background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
 }
 
-/* ===== HOME PAGE ===== */
 .center {
   height: 100vh;
   display: flex;
@@ -62,7 +61,6 @@ body {
   background: #0d47a1;
 }
 
-/* ===== CHAT PAGE ===== */
 .app {
   height: 100vh;
   display: flex;
@@ -92,7 +90,7 @@ body {
   background: #2e7d32;
 }
 
-/* Chat area */
+
 .chatBox {
   flex: 1;
   padding: 10px;
@@ -120,7 +118,7 @@ body {
   align-self: flex-end;
 }
 
-/* Input */
+
 .inputBox {
   display: flex;
   padding: 10px;
@@ -145,7 +143,6 @@ body {
   cursor: pointer;
 }
 
-/* Mobile friendly */
 @media (max-width: 600px) {
   .msg {
     max-width: 85%;

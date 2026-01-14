@@ -13,16 +13,15 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-/* ===== GLOBAL STORAGE (important for Render) ===== */
+
 global.rooms = global.rooms || {};
 const rooms = global.rooms;
 
-/* ===== Health Check ===== */
+
 app.get("/", (req, res) => {
   res.send("Chat backend running");
 });
 
-/* ===== PDF Download ===== */
 app.get("/download-notes/:room", (req, res) => {
   const roomCode = req.params.room;
   const room = rooms[roomCode];
@@ -46,7 +45,7 @@ app.get("/download-notes/:room", (req, res) => {
   doc.end();
 });
 
-/* ===== WebSocket ===== */
+
 wss.on("connection", (ws) => {
   let currentRoom = null;
   let currentRole = null;
@@ -55,7 +54,7 @@ wss.on("connection", (ws) => {
   ws.on("message", (data) => {
     const msg = JSON.parse(data);
 
-    /* Mentor creates room */
+   
     if (msg.type === "create-room") {
       const roomCode = uuidv4().slice(0, 6).toUpperCase();
       rooms[roomCode] = { mentor: ws, students: [], messages: [] };
@@ -67,7 +66,7 @@ wss.on("connection", (ws) => {
       ws.send(JSON.stringify({ type: "room-created", code: roomCode }));
     }
 
-    /* Student joins */
+    
     if (msg.type === "join-room") {
       const room = rooms[msg.code];
       if (!room) {
@@ -85,7 +84,7 @@ wss.on("connection", (ws) => {
       );
     }
 
-    /* Chat */
+    
     if (msg.type === "chat" && currentRoom) {
       const chat = {
         name: currentName,
@@ -117,7 +116,7 @@ wss.on("connection", (ws) => {
     }
 
     if (currentRole === "mentor") {
-      delete rooms[currentRoom]; // class closed
+      delete rooms[currentRoom];
     }
   });
 });
