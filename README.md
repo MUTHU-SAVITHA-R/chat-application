@@ -1,15 +1,17 @@
 **Company: Codetech IT Solutions**
-Name: MUTHU SAVITHA R
-Intern ID: CTIS0334
-Domain: Frontend
-Duration: 4 Weeks
+
+Company: Codetech IT Solutions  
+Intern: Muthu Savitha R  
+Intern ID: CTIS0334  
+Domain: Frontend Development  
+Duration: 4 Weeks  
 Mentor: Neela Santhosh
 
 **Classroom Chat Application**
 This is a web-based Classroom Chat Application developed as part of my Frontend Development Internship.
 The system allows mentors to create virtual classes and students to join using a unique class code, enabling real-time communication and file sharing in a classroom environment.
 
-🚀** Features**
+🚀**Features**
 Mentor can create a class
 Students can join using a unique class code
 Separate chat rooms for each class
@@ -18,8 +20,8 @@ Mentor can upload study materials and notes
 Students can download shared files
 User-friendly and responsive interface
 Supports multiple classes
-**
-🛠️ **Technologies Used
+
+🛠️ **Technologies Used**
 HTML5 – Structure of the application
 CSS3 – Styling and responsive layout
 JavaScript – Frontend logic and interactivity
