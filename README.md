@@ -33,3 +33,9 @@ style.css – Application styling
 script.js – Frontend logic
 server.js – Backend server and socket handling
 uploads/ – Mentor uploaded notes and files
+
+**Output**
+<img width="1919" height="865" alt="Image" src="https://github.com/user-attachments/assets/0a5da305-8452-437f-aef8-9c30df1f7165" />
+<img width="1919" height="863" alt="Image" src="https://github.com/user-attachments/assets/29fc3457-53a3-49d0-ace5-2972789da516" />
+<img width="1919" height="865" alt="Image" src="https://github.com/user-attachments/assets/1c7abdeb-a29d-4c56-bb4d-887606b640e9" />
+<img width="1900" height="858" alt="Image" src="https://github.com/user-attachments/assets/4823741b-aa11-473a-b4a9-6630266d4e4e" />
