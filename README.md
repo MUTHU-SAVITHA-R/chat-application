@@ -1,6 +1,5 @@
 **Company: Codetech IT Solutions**
 
-Company: Codetech IT Solutions  
 Intern: Muthu Savitha R  
 Intern ID: CTIS0334  
 Domain: Frontend Development  
